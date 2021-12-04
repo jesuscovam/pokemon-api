@@ -3,7 +3,7 @@ mod db;
 use db::*;
 use futures::{stream::FuturesUnordered, StreamExt};
 use pokemon_csv::*;
-use sqlx::{mysql::MySqlPoolOptions};
+use sqlx::mysql::MySqlPoolOptions;
 use std::{collections::HashMap,env, time::Duration};
 use color_eyre::{eyre, eyre::WrapErr, Section};
 use indicatif::ProgressBar;

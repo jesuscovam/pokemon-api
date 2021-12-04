@@ -15,16 +15,17 @@ async fn main() -> Result<(), Error>{
     Ok(())
 }
 
-async fn handler(
-    _: ApiGatewayProxyRequest,
-    _: Context
-) -> Result<ApiGatewayProxyResponse, Error> {
-    println!("handler");
-    Ok(ApiGatewayProxyResponse {
-        status_code: 200,
-        headers: HeaderMap::new(),
-        multi_value_headers: HeaderMap::new(),
-        body: Some(Body::Text("boop".to_string())),
-        is_base64_encoded: Some(false)
-    })
+async fn handler(	
+    _: ApiGatewayProxyRequest,	
+    _: Context,	
+) -> Result<ApiGatewayProxyResponse, Error> {	
+    println!("handler");	
+    let response = ApiGatewayProxyResponse {	
+        status_code: 200,	
+        headers: HeaderMap::new(),	
+        multi_value_headers: HeaderMap::new(),	
+        body: Some(Body::Text("Boop".to_string())),	
+        is_base64_encoded: Some(false),	
+    };	
+    Ok(response)	
 }

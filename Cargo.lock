@@ -999,6 +999,9 @@ dependencies = [
  "aws_lambda_events",
  "http",
  "lambda_runtime",
+ "serde",
+ "serde_json",
+ "sqlx",
  "tokio",
 ]
 

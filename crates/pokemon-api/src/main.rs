@@ -11,7 +11,9 @@ use sqlx::{mysql::MySqlPoolOptions, Pool, MySql};
 use serde_json::json;
 use tracing_subscriber;
 use tracing::{error, info, instrument};
+use once_cell::sync::OnceCell;
 
+static POOL: OnceCell<Pool<MySql>> = OnceCell::new();
 
 
 #[derive(Debug, sqlx::FromRow, Serialize)]
@@ -23,6 +25,7 @@ struct PokemonHp {
 #[tokio::main]
 async fn main() -> Result<(), Error>{
     tracing_subscriber::fmt::init();
+    setup_db_connection("DATABASE_URL".to_string()).await;
     let processor = handler_fn(handler);
     lambda_runtime::run(processor).await?;
     Ok(())
@@ -34,7 +37,6 @@ async fn handler(
     _: Context,	
 ) -> Result<ApiGatewayProxyResponse, Error> {	
     println!("handler");	
-    let database_url = std::env::var("DATABASE_URL")?;
     let path = event.path.expect("expect there to always be a path");
     let requested_pokemon = 
         path
@@ -61,13 +63,11 @@ async fn handler(
         Some(pokemon_name) => {
             info!(pokemon_name,"requested a pokemon");
 
-            let pool = setup_db_connection(&database_url).await?;
-
             let result = sqlx::query_as!(
                 PokemonHp,
                 r#"SELECT name, hp from pokemon where slug = ?"#,
                 pokemon_name
-            ).fetch_one(&pool)
+            ).fetch_one(POOL.get().unwrap())
             .await?;
         
             let json_pokemon = serde_json::to_string(&result)?;
@@ -85,11 +85,17 @@ async fn handler(
 }
 
 
-async fn setup_db_connection(db_url: &String) -> Result<Pool<MySql>, sqlx::Error> {
-    MySqlPoolOptions::new()
+async fn setup_db_connection(db_url: String) {
+    let database_url = std::env::var(db_url).unwrap();
+
+    let pool = MySqlPoolOptions::new()
         .max_connections(5)
-        .connect(db_url)
+        .connect(&database_url)
         .await
+        .unwrap();
+
+    POOL.get_or_init(|| pool);
+    
 }
 
 #[cfg(test)]
@@ -158,7 +164,7 @@ mod tests {
     #[tokio::test]
     async fn handler_handles() {
         let event = fake_request("/api/pokemon/bulbasaur".to_string());
-
+        setup_db_connection("DATABASE_URL".to_string()).await;
         assert_eq!(
             handler(event.clone(), Context::default())
                 .await

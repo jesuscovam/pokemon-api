@@ -19,7 +19,8 @@ static POOL: OnceCell<Pool<MySql>> = OnceCell::new();
 #[derive(Debug, sqlx::FromRow, Serialize)]
 struct PokemonHp {
     name: String,
-    hp: u16
+    hp: u16,
+    legendary_or_mythical: bool
 }
 
 #[tokio::main]
@@ -65,7 +66,7 @@ async fn handler(
 
             let result = sqlx::query_as!(
                 PokemonHp,
-                r#"SELECT name, hp from pokemon where slug = ?"#,
+                r#"SELECT name, hp, legendary_or_mythical as "legendary_or_mythical!: bool" FROM pokemon WHERE slug = ?"#,
                 pokemon_name
             ).fetch_one(POOL.get().unwrap())
             .await?;
@@ -175,7 +176,8 @@ mod tests {
                 multi_value_headers: HeaderMap::new(),
                 body: Some(Body::Text(serde_json::to_string(&PokemonHp {
                     name: String::from("Bulbasaur"),
-                    hp: 45
+                    hp: 45,
+                    legendary_or_mythical: false
                 }).unwrap())),
                 is_base64_encoded: Some(false)
             },

@@ -9,6 +9,9 @@ use lambda_runtime::{handler_fn, Context, Error};
 use serde::Serialize;
 use sqlx::{mysql::MySqlPoolOptions, Pool, MySql};
 use serde_json::json;
+use tracing_subscriber;
+use tracing::{error, info, instrument};
+
 
 
 #[derive(Debug, sqlx::FromRow, Serialize)]
@@ -19,12 +22,13 @@ struct PokemonHp {
 
 #[tokio::main]
 async fn main() -> Result<(), Error>{
-    println!("cold start");
+    tracing_subscriber::fmt::init();
     let processor = handler_fn(handler);
     lambda_runtime::run(processor).await?;
     Ok(())
 }
 
+#[instrument]
 async fn handler(	
     event: ApiGatewayProxyRequest,	
     _: Context,	
@@ -39,6 +43,7 @@ async fn handler(
 
     match requested_pokemon {
         Some("") => {
+            error!("searched for empty pokemon");
             let error_message = serde_json::to_string(&json!({
                 "error": "searched for empty pokemon"
             }))?;
@@ -54,6 +59,8 @@ async fn handler(
         },
         None => panic!("requested_pokemon is None, which should never happen"),
         Some(pokemon_name) => {
+            info!(pokemon_name,"requested a pokemon");
+
             let pool = setup_db_connection(&database_url).await?;
 
             let result = sqlx::query_as!(
